@@ -19,7 +19,7 @@ const config = {
 }
 
 function preload() {
-    console.log("preload")
+    this.load.image("player", "player.png")
 }
 
 function create() {
