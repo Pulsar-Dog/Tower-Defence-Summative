@@ -1,17 +1,45 @@
 import Phaser from "phaser"
 
 // import { * } from "asdasd.js"
+
+// enemy class is an enemy in the game
 class Enemy extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y) {
+        //calling the parent sprite constructor
+        // scene, current game scene
+        //x, y, start pos
+        // drone is the image
         super(scene, x, y, "drone")
-        scene.add.existing(this)
-        this.setScale(0.2)
-        this.pathIndex = 0
+        scene.add.existing(this) //add the enemy to the scene
+        this.setScale(0.2) // make the enemy smaller
+        this.pathPoint = 0 // track the point on the path the enemy is moving to
 
     }
 
     moveAlongPath(pathPoints, speed = 2) {
+        //move if there are more points
+        if (this.pathPoint < pathPoints.length) {
+            const target = pathPoints[this.pathPoint]
 
+            const directionx = target.x - this.x
+            const directiony = target.y - this.y
+            
+            const distance = Math.sqrt(directionx * directionx + directiony * directiony)
+
+            if (distance <= 0) {
+                
+                this.pathPoint ++
+                
+            }
+            else{
+                this.x += (directionx / distance) * speed
+                this.y += (directiony / distance) * speed
+                this.rotation = Math.atan2(directiony, directionx)
+            }
+        }
+        else{
+            this.destroy()
+        }
     }
 }
 
@@ -31,8 +59,12 @@ class MainScene extends Phaser.Scene {
 
     update() {
         console.log("update")
+        if (this.enemy) {
+            this.enemy.moveAlongPath(this.pathPoints, 2)
+        }
     }
 
+    
     drawPath() {
         // Make a path for the enemies
         const graphics = this.add.graphics()
