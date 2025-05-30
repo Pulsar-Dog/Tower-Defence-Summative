@@ -2,6 +2,38 @@ import Phaser from "phaser"
 
 // import { * } from "asdasd.js"
 
+class Tower extends Phaser.GameObjects.Sprite {
+    constructor(scene, x, y){
+        super(scene, x, y, "bow")
+        scene.add.existing(this)
+        this.setScale(.1)
+    }
+
+    aimAtEnemy(){
+        let closestEnemy
+        let range = 1000
+
+        for (let enemy of this.amountOfEnimies) {
+            const distancex = enemy.x - bow.x
+            const distancey = enemy.y - bow.y
+
+            const distance = Math.sqrt(distancex*distancex + distancey*distancey)
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 // enemy class is an enemy in the game
 class Enemy extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y) {
@@ -13,6 +45,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
         scene.add.existing(this) //add the enemy to the scene
         this.setScale(0.2) // make the enemy smaller
         this.pathPoint = 0 // track the point on the path the enemy is moving to
+        this.health = 100
 
     }
 
@@ -29,12 +62,34 @@ class Enemy extends Phaser.GameObjects.Sprite {
             if (distance <= 0) {
                 
                 this.pathPoint ++
+                // let rotateAmount = .9
+                // let count = 0
+                
+                // const nextPoint = pathPoints[this.pathPoint]
+                // const nextDirectionx = nextPoint.x - this.x
+                // const nextDirectiony = nextPoint.y - this.y
+
+                // if (this.rotatingInterval){
+                //     clearInterval(this.rotatingInterval)
+                // }
+                // this.rotatingInterval = setInterval(() => {
+                //     this.rotation = Math.atan2(nextDirectiony - (nextDirectiony * rotateAmount), nextDirectionx - (nextDirectionx * rotateAmount))
+                //     rotateAmount -= .1
+                //     count ++
+                //     if (count >= 9){
+                //         clearInterval(this.rotatingInterval)
+                //     }
+                // }, 100)
                 
             }
             else{
                 this.x += (directionx / distance) * speed
                 this.y += (directiony / distance) * speed
                 this.rotation = Math.atan2(directiony, directionx)
+
+
+                
+                
             }
         }
         else{
@@ -45,22 +100,38 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
 
 class MainScene extends Phaser.Scene {
+    
+
     preload() {
         console.log("preload")
         this.load.image("drone", "Drone.png")
+        this.load.image("bow", "Sci-Fi Bow.png")
     }
 
     create() {
         console.log("create")
         this.drawPath()
+        this.amountOfEnimies= []
 
-        this.enemy = new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y)
+        this.bow = new Tower(this, 800, 200)
+
+        this.time.addEvent({
+            delay: 1000,
+            repeat: 4,
+            callback: () =>{
+                 this.amountOfEnimies.push(new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y))
+            }
+        })
+
+
+       
+
     }
 
     update() {
         console.log("update")
-        if (this.enemy) {
-            this.enemy.moveAlongPath(this.pathPoints, 2)
+        for (let i = 0; i < this.amountOfEnimies.length; i++){
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
         }
     }
 
