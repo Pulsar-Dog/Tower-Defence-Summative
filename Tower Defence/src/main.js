@@ -47,7 +47,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y){
         super(scene, x, y, "bullet")
         scene.add.existing(this)
-        this.setScale(1)
+        this.setScale(.5)
     }
     
     shootAtEnemy(target){
@@ -57,12 +57,12 @@ class Bullet extends Phaser.GameObjects.Sprite {
             
         const distance = Math.sqrt(directionx * directionx + directiony * directiony)
 
-        if (distance <= 5){
+        if (distance <= 10){
             this.destroy()
         }
         else{
-            this.x += (directionx / distance) * 15
-            this.y += (directiony / distance) * 15
+            this.x += (directionx / distance) * 30
+            this.y += (directiony / distance) * 30
         }
     }
 
@@ -155,14 +155,27 @@ class MainScene extends Phaser.Scene {
         this.drawPath()
         this.amountOfEnimies= []
 
-        this.bow = new Tower(this, 800, 200)
-        this.bullet = new Bullet(this, this.bow.x, this.bow.y)
-
         this.time.addEvent({
             delay: 1000,
             repeat: 4,
             callback: () =>{
                  this.amountOfEnimies.push(new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y))
+            }
+        })
+        
+        this.bow = new Tower(this, 800, 200)
+    
+        this.bullets = []
+        
+        this.time.addEvent({
+            delay: 1000,
+            loop: true,
+            callback: () => {
+                const closest = this.bow.aimAtEnemy(this.amountOfEnimies) 
+                if (closest){
+                    const bullet = new Bullet(this, this.bow.x, this.bow.y)
+                    this.bullets.push(bullet)
+                }
             }
         })
 
@@ -177,9 +190,12 @@ class MainScene extends Phaser.Scene {
             this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
         }
         const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
-        if (closest){
-            this.bullet.shootAtEnemy(closest)
+        for (let bullet of this.bullets){
+            if (closest){
+                bullet.shootAtEnemy(closest)
+            }
         }
+        
     }
 
     
