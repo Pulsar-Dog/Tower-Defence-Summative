@@ -9,24 +9,65 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.setScale(.1)
     }
 
-    aimAtEnemy(){
+    aimAtEnemy(enemies){
+        let range = 500
         let closestEnemy
-        let range = 1000
+        let distanceToEnemy = 1000
 
-        for (let enemy of this.amountOfEnimies) {
-            const distancex = enemy.x - bow.x
-            const distancey = enemy.y - bow.y
+        for (let enemy of enemies) {
+            const distancex = enemy.x - this.x
+            const distancey = enemy.y - this.y
 
             const distance = Math.sqrt(distancex*distancex + distancey*distancey)
+
+            if (distance < distanceToEnemy && distance < range){
+                closestEnemy = enemy
+                distanceToEnemy = distance
+
+            }
+            
         }
+        if (closestEnemy) {
+            const newRotation = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x)
+
+            const lerpedRot = Phaser.Math.Linear(this.rotation, newRotation, 0.2)
+            this.rotation = lerpedRot
+            // this.rotation = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x)
+        }
+        return closestEnemy
     }
+
+    
+        
+    
 }
 
 
+class Bullet extends Phaser.GameObjects.Sprite {
+    constructor(scene, x, y){
+        super(scene, x, y, "bullet")
+        scene.add.existing(this)
+        this.setScale(1)
+    }
+    
+    shootAtEnemy(target){
+        this.rotation = Math.atan2(target.y - this.y, target.x - this.x)
+        const directionx = target.x - this.x
+        const directiony = target.y - this.y
+            
+        const distance = Math.sqrt(directionx * directionx + directiony * directiony)
+
+        if (distance <= 5){
+            this.destroy()
+        }
+        else{
+            this.x += (directionx / distance) * 15
+            this.y += (directiony / distance) * 15
+        }
+    }
 
 
-
-
+}
 
 
 
@@ -106,6 +147,7 @@ class MainScene extends Phaser.Scene {
         console.log("preload")
         this.load.image("drone", "Drone.png")
         this.load.image("bow", "Sci-Fi Bow.png")
+        this.load.image("bullet", "Bullet.png")
     }
 
     create() {
@@ -114,6 +156,7 @@ class MainScene extends Phaser.Scene {
         this.amountOfEnimies= []
 
         this.bow = new Tower(this, 800, 200)
+        this.bullet = new Bullet(this, this.bow.x, this.bow.y)
 
         this.time.addEvent({
             delay: 1000,
@@ -132,6 +175,10 @@ class MainScene extends Phaser.Scene {
         console.log("update")
         for (let i = 0; i < this.amountOfEnimies.length; i++){
             this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
+        }
+        const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
+        if (closest){
+            this.bullet.shootAtEnemy(closest)
         }
     }
 
