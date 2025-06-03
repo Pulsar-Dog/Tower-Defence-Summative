@@ -6,11 +6,11 @@ class Tower extends Phaser.GameObjects.Sprite {
         super(scene, x, y, "bow")
         scene.add.existing(this)
         this.setScale(.1)
-        this.attackSpeed = 500
+        this.attackSpeed = 1000
     }
 
     // Make the tower aim at the closest enemy
-    aimAtEnemy(enemies){
+    aimAtClosestEnemy(enemies){
         //maxrange of the tower
         let range = 200
         let closestEnemy
@@ -68,6 +68,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
 
             // get rid of the bullet when it gets close
             if (distance <= 10){
+                this.target.health -= 10
                 this.destroy()
             }
             else if (distance> 500){
@@ -106,58 +107,67 @@ class Enemy extends Phaser.GameObjects.Sprite {
         this.setScale(0.2) // make the enemy smaller
         this.pathPoint = 0 // track the point on the path the enemy is moving to
         this.health = 100
+        this.setInteractive()
 
     }
 
+    
     moveAlongPath(pathPoints, speed) {
         //move if there are more points
-        if (this.pathPoint < pathPoints.length) {
-            const target = pathPoints[this.pathPoint]
+        if (this.health > 0){
+            if (this.pathPoint < pathPoints.length) {
+                const target = pathPoints[this.pathPoint]
 
-            const directionx = target.x - this.x
-            const directiony = target.y - this.y
-            
-            const distance = Math.sqrt(directionx * directionx + directiony * directiony)
+                const directionx = target.x - this.x
+                const directiony = target.y - this.y
+                
+                const distance = Math.sqrt(directionx * directionx + directiony * directiony)
 
-            if (distance <= 5) {
-                
-                this.pathPoint ++
-                // let rotateAmount = .9
-                // let count = 0
-                
-                // const nextPoint = pathPoints[this.pathPoint]
-                // const nextDirectionx = nextPoint.x - this.x
-                // const nextDirectiony = nextPoint.y - this.y
+                if (distance <= 5) {
+                    
+                    this.pathPoint ++
+                    // let rotateAmount = .9
+                    // let count = 0
+                    
+                    // const nextPoint = pathPoints[this.pathPoint]
+                    // const nextDirectionx = nextPoint.x - this.x
+                    // const nextDirectiony = nextPoint.y - this.y
 
-                // if (this.rotatingInterval){
-                //     clearInterval(this.rotatingInterval)
-                // }
-                // this.rotatingInterval = setInterval(() => {
-                //     this.rotation = Math.atan2(nextDirectiony - (nextDirectiony * rotateAmount), nextDirectionx - (nextDirectionx * rotateAmount))
-                //     rotateAmount -= .1
-                //     count ++
-                //     if (count >= 9){
-                //         clearInterval(this.rotatingInterval)
-                //     }
-                // }, 100)
-                
+                    // if (this.rotatingInterval){
+                    //     clearInterval(this.rotatingInterval)
+                    // }
+                    // this.rotatingInterval = setInterval(() => {
+                    //     this.rotation = Math.atan2(nextDirectiony - (nextDirectiony * rotateAmount), nextDirectionx - (nextDirectionx * rotateAmount))
+                    //     rotateAmount -= .1
+                    //     count ++
+                    //     if (count >= 9){
+                    //         clearInterval(this.rotatingInterval)
+                    //     }
+                    // }, 100)
+                    
+                }
+                else{
+                    this.x += (directionx / distance) * speed
+                    this.y += (directiony / distance) * speed
+                    this.rotation = Math.atan2(directiony, directionx)
+
+
+                    
+                    
+                }
             }
             else{
-                this.x += (directionx / distance) * speed
-                this.y += (directiony / distance) * speed
-                this.rotation = Math.atan2(directiony, directionx)
-
-
-                
-                
+                this.pathPoint = 0
+                this.x = pathPoints[0].x
+                this.y = pathPoints[0].y
             }
         }
         else{
-            this.pathPoint = 0
-            this.x = pathPoints[0].x
-            this.y = pathPoints[0].y
+            this.destroy()
         }
     }
+
+
 }
 
 
@@ -184,7 +194,7 @@ class MainScene extends Phaser.Scene {
             delay: newBow.attackSpeed,
             loop: true,
             callback: () => {
-            const closest = newBow.aimAtEnemy(this.amountOfEnimies)
+            const closest = newBow.aimAtClosestEnemy(this.amountOfEnimies)
             if (closest) {
                 const bullet = new Bullet(this, newBow.x, newBow.y)
                 bullet.target = closest
@@ -197,10 +207,21 @@ class MainScene extends Phaser.Scene {
         // every second, for 5 seconds, add an enemy to the list
         this.amountOfEnimies= []
         this.time.addEvent({
-            delay: 500,
-            repeat: 4,
+            delay: 1000,
+            repeat: 10,
             callback: () =>{
-                 this.amountOfEnimies.push(new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y))
+                const enemy = new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y);
+                enemy.on('pointerover', () => {
+                    this.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
+                        fontSize: "50px",
+                        fill: "#ffffff"
+                    })
+                });
+                enemy.on('pointerout', () => {
+                    this.healthText.destroy()
+                    this.healthText = null
+                });
+this.amountOfEnimies.push(enemy);
             }
         })
         
@@ -220,17 +241,20 @@ class MainScene extends Phaser.Scene {
     }
 
     update() {
-        console.log("update")
-
         
 
         // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
             this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
+            if (this.amountOfEnimies[i].healthText){
+                this.amountOfEnimies[i].healthText.setPosition(this.amountOfEnimies[i].x, this.amountOfEnimies[i].y)
+                this.amountOfEnimies[i].healthText.setText(this.amountOfEnimies[i].health)
+            }
         }
+        this.amountOfEnimies = this.amountOfEnimies.filter(enemy => enemy.active)
         
         for (let bow of this.bows) {
-        bow.aimAtEnemy(this.amountOfEnimies);
+            bow.aimAtClosestEnemy(this.amountOfEnimies);
         }
 
         // aim the bow at the closest enemy and shoot bullets
