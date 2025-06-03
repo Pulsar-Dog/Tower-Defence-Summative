@@ -1,18 +1,18 @@
 import Phaser from "phaser"
 
-// import { * } from "asdasd.js"
 
 class Tower extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y){
         super(scene, x, y, "bow")
         scene.add.existing(this)
         this.setScale(.1)
+        this.attackSpeed = 500
     }
 
     // Make the tower aim at the closest enemy
     aimAtEnemy(enemies){
         //maxrange of the tower
-        let range = 500
+        let range = 200
         let closestEnemy
         let distanceToEnemy = Infinity
 
@@ -57,6 +57,8 @@ class Bullet extends Phaser.GameObjects.Sprite {
     
     //shoot at the closest enemy
     shootAtEnemy(target){
+        let bulletSpeed = 10
+
         if (target){
             this.rotation = Math.atan2(target.y - this.y, target.x - this.x)
             const directionx = target.x - this.x
@@ -72,8 +74,8 @@ class Bullet extends Phaser.GameObjects.Sprite {
                 this.destroy()
             }
             else{
-                this.x += (directionx / distance) * 5
-                this.y += (directiony / distance) * 5
+                this.x += (directionx / distance) * bulletSpeed
+                this.y += (directiony / distance) * bulletSpeed
             }
         }
         else{
@@ -107,7 +109,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
     }
 
-    moveAlongPath(pathPoints, speed = 2) {
+    moveAlongPath(pathPoints, speed) {
         //move if there are more points
         if (this.pathPoint < pathPoints.length) {
             const target = pathPoints[this.pathPoint]
@@ -117,7 +119,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
             
             const distance = Math.sqrt(directionx * directionx + directiony * directiony)
 
-            if (distance <= 0) {
+            if (distance <= 5) {
                 
                 this.pathPoint ++
                 // let rotateAmount = .9
@@ -151,7 +153,9 @@ class Enemy extends Phaser.GameObjects.Sprite {
             }
         }
         else{
-            this.destroy()
+            this.pathPoint = 0
+            this.x = pathPoints[0].x
+            this.y = pathPoints[0].y
         }
     }
 }
@@ -170,11 +174,30 @@ class MainScene extends Phaser.Scene {
     create() {
         console.log("create")
         this.drawPath()
+        this.bows = []
+
+        this.input.on("pointerdown", (pointer) => {
+            const newBow = new Tower(this, pointer.x, pointer.y)
+            this.bows.push(newBow)
+
+            this.time.addEvent({
+            delay: newBow.attackSpeed,
+            loop: true,
+            callback: () => {
+            const closest = newBow.aimAtEnemy(this.amountOfEnimies)
+            if (closest) {
+                const bullet = new Bullet(this, newBow.x, newBow.y)
+                bullet.target = closest
+                this.bullets.push(bullet)
+            }
+        }
+    })
+        })
 
         // every second, for 5 seconds, add an enemy to the list
         this.amountOfEnimies= []
         this.time.addEvent({
-            delay: 1000,
+            delay: 500,
             repeat: 4,
             callback: () =>{
                  this.amountOfEnimies.push(new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y))
@@ -182,22 +205,14 @@ class MainScene extends Phaser.Scene {
         })
         
         //spawn the bow
-        this.bow = new Tower(this, 800, 200)
+        
     
         //make bullets spawn on the bow every second
+
         this.bullets = []
-        this.time.addEvent({
-            delay: 10,
-            loop: true,
-            callback: () => {
-                const closest = this.bow.aimAtEnemy(this.amountOfEnimies) 
-                if (closest){
-                    const bullet = new Bullet(this, this.bow.x, this.bow.y)
-                    bullet.target = closest
-                    this.bullets.push(bullet)
-                }
-            }
-        })
+    
+
+
 
 
        
@@ -206,18 +221,26 @@ class MainScene extends Phaser.Scene {
 
     update() {
         console.log("update")
+
+        
+
         // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 1)    
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
+        }
+        
+        for (let bow of this.bows) {
+        bow.aimAtEnemy(this.amountOfEnimies);
         }
 
         // aim the bow at the closest enemy and shoot bullets
-        const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
+        // const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
         for (let bullet of this.bullets){
             bullet.shootAtEnemy(bullet.target)
 
         }
         this.bullets = this.bullets.filter(bullet => bullet.active)
+        
     }
 
     
