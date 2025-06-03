@@ -9,17 +9,21 @@ class Tower extends Phaser.GameObjects.Sprite {
         this.setScale(.1)
     }
 
+    // Make the tower aim at the closest enemy
     aimAtEnemy(enemies){
+        //maxrange of the tower
         let range = 500
         let closestEnemy
-        let distanceToEnemy = 1000
+        let distanceToEnemy = Infinity
 
+        // for each enemy in the list, check the distance to the tower
         for (let enemy of enemies) {
             const distancex = enemy.x - this.x
             const distancey = enemy.y - this.y
 
             const distance = Math.sqrt(distancex*distancex + distancey*distancey)
 
+            // if the distance is less than the closest enemy, and less than the range, set the closest enemy
             if (distance < distanceToEnemy && distance < range){
                 closestEnemy = enemy
                 distanceToEnemy = distance
@@ -27,6 +31,7 @@ class Tower extends Phaser.GameObjects.Sprite {
             }
             
         }
+        //rotate the tower to the closest enemy
         if (closestEnemy) {
             const newRotation = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x)
 
@@ -50,20 +55,32 @@ class Bullet extends Phaser.GameObjects.Sprite {
         this.setScale(.5)
     }
     
+    //shoot at the closest enemy
     shootAtEnemy(target){
-        this.rotation = Math.atan2(target.y - this.y, target.x - this.x)
-        const directionx = target.x - this.x
-        const directiony = target.y - this.y
-            
-        const distance = Math.sqrt(directionx * directionx + directiony * directiony)
+        if (target){
+            this.rotation = Math.atan2(target.y - this.y, target.x - this.x)
+            const directionx = target.x - this.x
+            const directiony = target.y - this.y
+                
+            const distance = Math.sqrt(directionx * directionx + directiony * directiony)
 
-        if (distance <= 10){
-            this.destroy()
+            // get rid of the bullet when it gets close
+            if (distance <= 10){
+                this.destroy()
+            }
+            else if (distance> 500){
+                this.destroy()
+            }
+            else{
+                this.x += (directionx / distance) * 5
+                this.y += (directiony / distance) * 5
+            }
         }
         else{
-            this.x += (directionx / distance) * 30
-            this.y += (directiony / distance) * 30
+            this.destroy()
         }
+        
+        
     }
 
 
@@ -153,8 +170,9 @@ class MainScene extends Phaser.Scene {
     create() {
         console.log("create")
         this.drawPath()
-        this.amountOfEnimies= []
 
+        // every second, for 5 seconds, add an enemy to the list
+        this.amountOfEnimies= []
         this.time.addEvent({
             delay: 1000,
             repeat: 4,
@@ -163,17 +181,19 @@ class MainScene extends Phaser.Scene {
             }
         })
         
+        //spawn the bow
         this.bow = new Tower(this, 800, 200)
     
+        //make bullets spawn on the bow every second
         this.bullets = []
-        
         this.time.addEvent({
-            delay: 1000,
+            delay: 10,
             loop: true,
             callback: () => {
                 const closest = this.bow.aimAtEnemy(this.amountOfEnimies) 
                 if (closest){
                     const bullet = new Bullet(this, this.bow.x, this.bow.y)
+                    bullet.target = closest
                     this.bullets.push(bullet)
                 }
             }
@@ -186,16 +206,18 @@ class MainScene extends Phaser.Scene {
 
     update() {
         console.log("update")
+        // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 1)    
         }
+
+        // aim the bow at the closest enemy and shoot bullets
         const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
         for (let bullet of this.bullets){
-            if (closest){
-                bullet.shootAtEnemy(closest)
-            }
+            bullet.shootAtEnemy(bullet.target)
+
         }
-        
+        this.bullets = this.bullets.filter(bullet => bullet.active)
     }
 
     
