@@ -6,7 +6,7 @@ class Tower extends Phaser.GameObjects.Sprite {
         super(scene, x, y, "bow")
         scene.add.existing(this)
         this.setScale(.1)
-        this.attackSpeed = 1000
+        this.attackSpeed = 10
     }
 
     // Make the tower aim at the closest enemy
@@ -42,6 +42,43 @@ class Tower extends Phaser.GameObjects.Sprite {
         return closestEnemy
     }
 
+    aimAtFarthestEnemy(enemies){
+        let range = 200
+        let farthestEnemy
+        let farthestPoint = -1
+        let farthestDistance = -1
+        let distance = 0
+        for (let enemy of enemies){
+            if (enemy.pathPoint < this.scene.pathPoints.length) {
+                    const target = this.scene.pathPoints[enemy.pathPoint]
+
+                    const directionx = target.x - this.x
+                    const directiony = target.y - this.y
+                    
+                    distance = Math.sqrt(directionx * directionx + directiony * directiony)
+            }
+
+            if (enemy.pathPoint > farthestPoint && distance < range) {
+                farthestPoint = enemy.pathPoint;
+                farthestDistance = distance;
+                farthestEnemy = enemy;
+            } else if (enemy.pathPoint === farthestPoint && distance > farthestDistance && distance < range) {
+                farthestDistance = distance;
+                farthestEnemy = enemy;
+            }
+        }
+        
+        if (farthestEnemy){
+            const newRotation = Math.atan2(farthestEnemy.y - this.y, farthestEnemy.x - this.x)
+
+            const lerpedRot = Phaser.Math.Linear(this.rotation, newRotation, 0.2)
+            this.rotation = lerpedRot
+        }
+        return farthestEnemy
+    }
+
+    
+
     
         
     
@@ -68,7 +105,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
 
             // get rid of the bullet when it gets close
             if (distance <= 10){
-                this.target.health -= 10
+                this.target.health -= 1
                 this.destroy()
             }
             else if (distance> 500){
@@ -85,6 +122,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
         
         
     }
+    
 
 
 }
@@ -106,8 +144,9 @@ class Enemy extends Phaser.GameObjects.Sprite {
         scene.add.existing(this) //add the enemy to the scene
         this.setScale(0.2) // make the enemy smaller
         this.pathPoint = 0 // track the point on the path the enemy is moving to
-        this.health = 100
+        this.health = 10000
         this.setInteractive()
+        this.distance
 
     }
 
@@ -212,14 +251,18 @@ class MainScene extends Phaser.Scene {
             callback: () =>{
                 const enemy = new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y);
                 enemy.on('pointerover', () => {
-                    this.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
-                        fontSize: "50px",
-                        fill: "#ffffff"
-                    })
+                    if (!enemy.healthText){
+                        enemy.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
+                            fontSize: "50px",
+                            fill: "#000000"
+                        })
+                    }
                 });
                 enemy.on('pointerout', () => {
-                    this.healthText.destroy()
-                    this.healthText = null
+                    if (enemy.healthText) {
+                        enemy.healthText.destroy();
+                        enemy.healthText = null;
+                    }
                 });
 this.amountOfEnimies.push(enemy);
             }
@@ -275,6 +318,7 @@ this.amountOfEnimies.push(enemy);
 
         graphics.beginPath()
         graphics.moveTo(0, 100)
+        graphics.moveTo(1, 100)
         graphics.lineTo(850, 100)
         graphics.lineTo(850, 300)
         graphics.lineTo(1000, 300)
