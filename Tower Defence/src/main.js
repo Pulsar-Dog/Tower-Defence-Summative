@@ -1,13 +1,15 @@
 import Phaser from "phaser"
 
+let money = 0
 
 class Tower extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, range){
+    constructor(scene, x, y, range, attackSpeed){
         super(scene, x, y, "bow")
         scene.add.existing(this)
         this.setScale(.1)
-        this.attackSpeed = 10
+        this.attackSpeed = attackSpeed
         this.range = range
+        this.setInteractive()
         // this.rangeSprite = scene.add.image(x,y, "range")
         // this.rangeSprite.setSize((Math.Pi * this.range)**2)
         // this.rangeSprite.setDepth(-1)
@@ -25,7 +27,7 @@ class Tower extends Phaser.GameObjects.Sprite {
             const distancex = enemy.x - this.x
             const distancey = enemy.y - this.y
 
-            const distance = Math.sqrt(distancex*distancex + distancey*distancey)
+            const distance = Math.sqrt(distancex*distancex + distancey*distancey) -12
 
             // if the distance is less than the closest enemy, and less than the range, set the closest enemy
             if (distance < distanceToEnemy && distance < this.range){
@@ -56,10 +58,10 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 
 class Bullet extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, bulletSpeed){
+    constructor(scene, x, y, bulletSpeed, damage){
         super(scene, x, y, "bullet")
         scene.add.existing(this)
-
+        this.damage = damage
         this.bulletSpeed = bulletSpeed
         this.setScale(.5)
     }
@@ -77,7 +79,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
 
             // get rid of the bullet when it gets close
             if (distance <= 10){
-                this.target.health -= 1
+                this.target.health -= this.damage
                 this.destroy()
             }
             else if (distance > Tower.range){
@@ -116,9 +118,12 @@ class Enemy extends Phaser.GameObjects.Sprite {
         scene.add.existing(this) //add the enemy to the scene
         this.setScale(0.2) // make the enemy smaller
         this.pathPoint = 0 // track the point on the path the enemy is moving to
+        this.fullHealth = health
         this.health = health
         this.setInteractive()
         this.distance
+        this.sixtysixPercent = false
+        this.thirtythreePercent = false
 
     }
 
@@ -178,6 +183,13 @@ class Enemy extends Phaser.GameObjects.Sprite {
         }
     }
 
+    // giveMoney(multiplier, health, fullHealth, variable){
+    //     if (health < fullHealth*multiplier){
+    //         money += 100
+    //         variable = true
+    //     }
+    // }
+
 
 }
 
@@ -196,16 +208,32 @@ class MainScene extends Phaser.Scene {
     create() {
         console.log("create")
         this.drawPath()
+        // money = money.toString()
+        this.moneyText = this.add.text(20, 20, money)
         this.bows = []
 
         this.input.on("pointerdown", (pointer) => {
-            const newBow = new Tower(this, pointer.x, pointer.y, 100)
+            const newBow = new Tower(this, pointer.x, pointer.y, 500, 300)
             this.bows.push(newBow)
             newBow.on('pointerover', () => {
-                if (!Tower.rangeSprite) {
-                    rangeSprite = scene.add.image(x,y, "range")
-                }
+
+                    console.log("On Bow")
+                    this.rangeSprite = this.add.image(newBow.x,newBow.y, "range")
+                    const desiredDiameter = newBow.range * 2;
+                    const scale = desiredDiameter / this.rangeSprite.width;
+                    this.rangeSprite.setScale(scale)
+                    this.rangeSprite.setDepth(-1)
+                    this.rangeSprite.setAlpha(.5)
+                    this.rangeSprite.setTint(0x57B9FF)
+                
+            newBow.on('pointerout', () => {
+
+                    console.log("offbow")
+                    this.rangeSprite.destroy()
+
             })
+            })
+            
 
             this.time.addEvent({
             delay: newBow.attackSpeed,
@@ -213,7 +241,7 @@ class MainScene extends Phaser.Scene {
             callback: () => {
             const closest = newBow.aimAtClosestEnemy(this.amountOfEnimies)
             if (closest) {
-                const bullet = new Bullet(this, newBow.x, newBow.y, 10)
+                const bullet = new Bullet(this, newBow.x, newBow.y, 20, 100)
                 bullet.target = closest
                 this.bullets.push(bullet)
             }
@@ -263,11 +291,19 @@ this.amountOfEnimies.push(enemy);
     }
 
     update() {
-        
-
+        this.moneyText.setText(money)
+        let moneyMultiplier = Phaser.Math.Between(66, 133)
         // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)    
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)  
+            if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.66 && !this.amountOfEnimies[i].sixtysixPercent){
+                money += moneyMultiplier
+                this.amountOfEnimies[i].sixtysixPercent = true
+            }
+            if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.33 && !this.amountOfEnimies[i].thirtythreePercent){
+                money += moneyMultiplier
+                this.amountOfEnimies[i].thirtythreePercent = true
+            }
             if (this.amountOfEnimies[i].healthText){
                 this.amountOfEnimies[i].healthText.setPosition(this.amountOfEnimies[i].x, this.amountOfEnimies[i].y)
                 this.amountOfEnimies[i].healthText.setText(this.amountOfEnimies[i].health)
@@ -276,8 +312,11 @@ this.amountOfEnimies.push(enemy);
         this.amountOfEnimies = this.amountOfEnimies.filter(enemy => enemy.active)
         
         for (let bow of this.bows) {
-            bow.aimAtClosestEnemy(this.amountOfEnimies);
+            bow.aimAtClosestEnemy(this.amountOfEnimies)
+            
+            
         }
+        
 
         // aim the bow at the closest enemy and shoot bullets
         // const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
