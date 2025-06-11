@@ -1,6 +1,6 @@
 import Phaser from "phaser"
 
-let money = 0
+let money = 1000
 let moneyMultiplier = Phaser.Math.Between(66, 133)
 
 class Tower extends Phaser.GameObjects.Sprite {
@@ -210,6 +210,10 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0' }).setOrigin(0.5).setInteractive()
+        menuText.on('pointerdown', ()=>{
+            this.scene.start("MenuScene")
+        })
         this.paused = false
         console.log("create")
         this.drawPath()
@@ -227,49 +231,88 @@ class MainScene extends Phaser.Scene {
         this.bows = []
 
         this.input.on("pointerdown", (pointer) => {
-            const newBow = new Tower(this, pointer.x, pointer.y, 200, 300)
-            this.bows.push(newBow)
-            newBow.on('pointerover', () => {
-                if (!newBow.rangeSprite){
-                    newBow.rangeSprite = this.add.image(newBow.x, newBow.y, rangeKey);
-                    // Scale so the displayed radius matches newBow.range
-                    const scale = newBow.range / baseRadius;
-                    newBow.rangeSprite.setScale(scale);
-                    newBow.rangeSprite.setDepth(-1);
-                    
+            const canvas = this.sys.game.canvas
+            const ctx = canvas.getContext('2d')
+            const imageData = ctx.getImageData(pointer.x, pointer.y, 1, 1).data
+            if (imageData[0] === 255 && imageData[1] === 255 && imageData[2] === 255 && imageData[3] > 0){
+            }
+            else{                            
+                let place = true           
+                for (let closeToTower of this.bows){
+                    const directionx = closeToTower.x - pointer.x
+                    const directiony = closeToTower.y - pointer.y
+
+                    const distance = Math.sqrt(directionx * directionx + directiony * directiony)
+                    if (distance < 30){
+                        place = false
+                        break
+                    }
                 }
-                this.scene.pause()
-                
-            })
-            newBow.on('pointerout', () => {
-                this.scene.resume()
-                if (newBow.rangeSprite){
+                if (place){
+                    const newBow = new Tower(this, pointer.x, pointer.y, 200, 300)
+                this.bows.push(newBow)
+                newBow.on('pointerover', () => {
+                    if (!newBow.rangeSprite){
+                        newBow.rangeSprite = this.add.image(newBow.x, newBow.y, rangeKey);
+                        // Scale so the displayed radius matches newBow.range
+                        const scale = newBow.range / baseRadius;
+                        newBow.rangeSprite.setScale(scale);
+                        newBow.rangeSprite.setDepth(-1);
+
+                        
+                    }
+                    this.paused = true
+                    for (let bow of this.bows){
+                        bow.bulletTimer.paused = true
+                    }
+                    this.enemyTimer.paused = true
                     
-                    console.log("offbow")
-                    newBow.rangeSprite.destroy()
-                    newBow.rangeSprite = null
+                })
+                newBow.on('pointerout', () => {
+                    this.scene.resume()
+                    if (newBow.rangeSprite){
+                        
+                        console.log("offbow")
+                        newBow.rangeSprite.destroy()
+                        newBow.rangeSprite = null
+                        
+                    }
+                    this.paused = false
+                    for (let bow of this.bows){
+                        bow.bulletTimer.paused= false
+                    }
                     
-                }
-            })
+                    this.enemyTimer.paused = false
+                })
             
 
-            this.time.addEvent({
-            delay: newBow.attackSpeed,
-            loop: true,
-            callback: () => {
-            const closest = newBow.aimAtClosestEnemy(this.amountOfEnimies)
-            if (closest) {
-                const bullet = new Bullet(this, newBow.x, newBow.y, 20, 100, newBow.range)
-                bullet.target = closest
-                this.bullets.push(bullet)
+                newBow.bulletTimer = this.time.addEvent({
+                delay: newBow.attackSpeed,
+                loop: true,
+                callback: () => {
+                const closest = newBow.aimAtClosestEnemy(this.amountOfEnimies)
+                if (closest) {
+                    const bullet = new Bullet(this, newBow.x, newBow.y, 20, 100, newBow.range)
+                    bullet.target = closest
+                    this.bullets.push(bullet)
+                }
+                }
+                })
+                }
+
+
+
+
+
+
+
+                
             }
-        }
-    })
-        })
+            })
 
         // every second, for 5 seconds, add an enemy to the list
         this.amountOfEnimies= []
-        this.time.addEvent({
+        this.enemyTimer = this.time.addEvent({
             delay: 1000,
             repeat: 10,
             callback: () =>{
@@ -390,13 +433,30 @@ this.amountOfEnimies.push(enemy);
 
     }
 }
+class MenuScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MenuScene' });
+    }
+
+    preload(){
+        this.load.image("drone", "Drone.png")
+        this.load.image("bow", "Sci-Fi Bow.png")
+        this.load.image("bullet", "Bullet.png")
+        this.load.image("range", "Range.png")
+    }
+    create(){
+        
+    }
+
+    update(){
+
+    }
 
 
 
 
 
-
-
+}
 
 
 
@@ -410,10 +470,10 @@ this.amountOfEnimies.push(enemy);
 
 
 const config = {
-    type: Phaser.WEBGL,
+    type: Phaser.CANVAS,
     width: 1100,
     height: 650,
-    scene: [MainScene],
+    scene: [MainScene, MenuScene],
     scale: {mode: Phaser.Scale.FIT},
     backgroundColor: 0x006400,
 
