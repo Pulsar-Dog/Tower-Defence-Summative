@@ -1,6 +1,7 @@
 import Phaser from "phaser"
 
 let money = 0
+let moneyMultiplier = Phaser.Math.Between(66, 133)
 
 class Tower extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, range, attackSpeed){
@@ -41,7 +42,7 @@ class Tower extends Phaser.GameObjects.Sprite {
         if (closestEnemy) {
             const newRotation = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x)
 
-            const lerpedRot = Phaser.Math.Linear(this.rotation, newRotation, 0.2)
+            const lerpedRot = Phaser.Math.Linear(this.rotation, newRotation, .09)
             this.rotation = lerpedRot
             return closestEnemy
             // this.rotation = Math.atan2(closestEnemy.y - this.y, closestEnemy.x - this.x)
@@ -58,11 +59,12 @@ class Tower extends Phaser.GameObjects.Sprite {
 
 
 class Bullet extends Phaser.GameObjects.Sprite {
-    constructor(scene, x, y, bulletSpeed, damage){
+    constructor(scene, x, y, bulletSpeed, damage, range){
         super(scene, x, y, "bullet")
         scene.add.existing(this)
         this.damage = damage
         this.bulletSpeed = bulletSpeed
+        this.range = range
         this.setScale(.5)
     }
     
@@ -82,7 +84,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
                 this.target.health -= this.damage
                 this.destroy()
             }
-            else if (distance > Tower.range){
+            else if (distance > this.range){
                 this.destroy()
             }
             else{
@@ -124,6 +126,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
         this.distance
         this.sixtysixPercent = false
         this.thirtythreePercent = false
+
 
     }
 
@@ -179,6 +182,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
             }
         }
         else{
+            money += moneyMultiplier 
             this.destroy()
         }
     }
@@ -206,32 +210,46 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        this.paused = false
         console.log("create")
         this.drawPath()
         // money = money.toString()
         this.moneyText = this.add.text(20, 20, money)
+        const baseRadius = 100;
+        const rangeKey = 'rangeCircle';
+        if (!this.textures.exists(rangeKey)) {
+            const g = this.make.graphics({x: 0, y: 0, add: false});
+            g.fillStyle(0x57B9FF, 0.3);
+            g.fillCircle(baseRadius, baseRadius, baseRadius);
+            g.generateTexture(rangeKey, baseRadius * 2, baseRadius * 2);
+            g.destroy();
+}
         this.bows = []
 
         this.input.on("pointerdown", (pointer) => {
-            const newBow = new Tower(this, pointer.x, pointer.y, 500, 300)
+            const newBow = new Tower(this, pointer.x, pointer.y, 200, 300)
             this.bows.push(newBow)
             newBow.on('pointerover', () => {
-
-                    console.log("On Bow")
-                    this.rangeSprite = this.add.image(newBow.x,newBow.y, "range")
-                    const desiredDiameter = newBow.range * 2;
-                    const scale = desiredDiameter / this.rangeSprite.width;
-                    this.rangeSprite.setScale(scale)
-                    this.rangeSprite.setDepth(-1)
-                    this.rangeSprite.setAlpha(.5)
-                    this.rangeSprite.setTint(0x57B9FF)
+                if (!newBow.rangeSprite){
+                    newBow.rangeSprite = this.add.image(newBow.x, newBow.y, rangeKey);
+                    // Scale so the displayed radius matches newBow.range
+                    const scale = newBow.range / baseRadius;
+                    newBow.rangeSprite.setScale(scale);
+                    newBow.rangeSprite.setDepth(-1);
+                    
+                }
+                this.scene.pause()
                 
-            newBow.on('pointerout', () => {
-
-                    console.log("offbow")
-                    this.rangeSprite.destroy()
-
             })
+            newBow.on('pointerout', () => {
+                this.scene.resume()
+                if (newBow.rangeSprite){
+                    
+                    console.log("offbow")
+                    newBow.rangeSprite.destroy()
+                    newBow.rangeSprite = null
+                    
+                }
             })
             
 
@@ -241,7 +259,7 @@ class MainScene extends Phaser.Scene {
             callback: () => {
             const closest = newBow.aimAtClosestEnemy(this.amountOfEnimies)
             if (closest) {
-                const bullet = new Bullet(this, newBow.x, newBow.y, 20, 100)
+                const bullet = new Bullet(this, newBow.x, newBow.y, 20, 100, newBow.range)
                 bullet.target = closest
                 this.bullets.push(bullet)
             }
@@ -291,11 +309,12 @@ this.amountOfEnimies.push(enemy);
     }
 
     update() {
+        if (this.paused) return
         this.moneyText.setText(money)
         let moneyMultiplier = Phaser.Math.Between(66, 133)
         // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 2)  
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 1)  
             if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.66 && !this.amountOfEnimies[i].sixtysixPercent){
                 money += moneyMultiplier
                 this.amountOfEnimies[i].sixtysixPercent = true
@@ -304,6 +323,7 @@ this.amountOfEnimies.push(enemy);
                 money += moneyMultiplier
                 this.amountOfEnimies[i].thirtythreePercent = true
             }
+            
             if (this.amountOfEnimies[i].healthText){
                 this.amountOfEnimies[i].healthText.setPosition(this.amountOfEnimies[i].x, this.amountOfEnimies[i].y)
                 this.amountOfEnimies[i].healthText.setText(this.amountOfEnimies[i].health)
