@@ -2,6 +2,7 @@ import Phaser from "phaser"
 
 let money = 1000
 let moneyMultiplier = Phaser.Math.Between(66, 133)
+let inventory = []
 
 class Tower extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, range, attackSpeed){
@@ -199,7 +200,9 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
 
 class MainScene extends Phaser.Scene {
-    
+    constructor() {
+        super({ key: 'MainScene' })
+    }
 
     preload() {
         console.log("preload")
@@ -210,9 +213,10 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0' }).setOrigin(0.5).setInteractive()
+        const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
         menuText.on('pointerdown', ()=>{
-            this.scene.start("MenuScene")
+            this.scene.pause()
+            this.scene.launch("MenuScene")
         })
         this.paused = false
         console.log("create")
@@ -248,8 +252,26 @@ class MainScene extends Phaser.Scene {
                         break
                     }
                 }
+                // for (let closeToEnemy of this.amountOfEnimies){
+                //     const directionx = closeToEnemy.x - pointer.x
+                //     const directiony = closeToEnemy.y - pointer.y
+
+                //     const distance = Math.sqrt(directionx * directionx + directiony * directiony)
+                //     if (distance < 30){
+                //         place = false
+                //         break
+                //     }
+                // }
+                if (!inventory.includes("bow")){
+                    place = false
+                    
+                }
                 if (place){
-                    const newBow = new Tower(this, pointer.x, pointer.y, 200, 300)
+                    const bowInvertoryIndex = inventory.indexOf("bow")
+                    if (bowInvertoryIndex !== -1) {
+                        inventory.splice(bowInvertoryIndex, 1)
+                    }
+                    const newBow = new Tower(this, pointer.x, pointer.y, 300, 100)
                 this.bows.push(newBow)
                 newBow.on('pointerover', () => {
                     if (!newBow.rangeSprite){
@@ -438,6 +460,11 @@ class MenuScene extends Phaser.Scene {
         super({ key: 'MenuScene' });
     }
 
+    buyStuff(){
+
+    }
+
+
     preload(){
         this.load.image("drone", "Drone.png")
         this.load.image("bow", "Sci-Fi Bow.png")
@@ -445,6 +472,22 @@ class MenuScene extends Phaser.Scene {
         this.load.image("range", "Range.png")
     }
     create(){
+        const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
+        const gameText = this.add.text(1050, 30, 'Game', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
+        gameText.on("pointerdown", () => {
+            this.scene.stop()
+            this.scene.resume("MainScene")
+        })
+
+
+        const buyBowBox = this.add.rectangle(300, 300, 80, 40, 0xffffff).setOrigin(0.5, 0.5).setDepth(1)
+        this.add.rectangle(buyBowBox.x, buyBowBox.y, buyBowBox.width+buyBowBox.height*.1, buyBowBox.height+buyBowBox.height*.1, 0x000000)
+        const buyBow = this.add.text(buyBowBox.x, buyBowBox.y, 'Buy', { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive().setDepth(2)
+        
+        buyBow.on("pointerdown", () => {
+            inventory.push("bow")
+        })
+
         
     }
 
