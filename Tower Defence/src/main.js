@@ -3,6 +3,7 @@ import Phaser from "phaser"
 let money = 1000
 let moneyMultiplier = Phaser.Math.Between(66, 133)
 let inventory = []
+let bowInventory = []
 
 class Tower extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, range, attackSpeed){
@@ -241,7 +242,7 @@ class MainScene extends Phaser.Scene {
             if (imageData[0] === 255 && imageData[1] === 255 && imageData[2] === 255 && imageData[3] > 0){
             }
             else{                            
-                let place = true           
+                let place = true
                 for (let closeToTower of this.bows){
                     const directionx = closeToTower.x - pointer.x
                     const directiony = closeToTower.y - pointer.y
@@ -262,14 +263,26 @@ class MainScene extends Phaser.Scene {
                 //         break
                 //     }
                 // }
+                const menuDistX =  pointer.x - 1050
+                const menuDistY = pointer.y - 30
+                const menuDistance = Math.sqrt(menuDistX * menuDistX + menuDistY * menuDistY)
+                if (menuDistance < 50){
+                    place = false
+                }
+                
                 if (!inventory.includes("bow")){
                     place = false
                     
                 }
                 if (place){
                     const bowInvertoryIndex = inventory.indexOf("bow")
+                    
                     if (bowInvertoryIndex !== -1) {
                         inventory.splice(bowInvertoryIndex, 1)
+                    }
+                    const bowInventoryIndex = bowInventory.indexOf("bow")
+                    if (bowInventoryIndex !== -1) {
+                        bowInventory.splice(bowInventoryIndex, 1)
                     }
                     const newBow = new Tower(this, pointer.x, pointer.y, 300, 100)
                 this.bows.push(newBow)
@@ -334,27 +347,17 @@ class MainScene extends Phaser.Scene {
 
         // every second, for 5 seconds, add an enemy to the list
         this.amountOfEnimies= []
+        this.wave = 1
         this.enemyTimer = this.time.addEvent({
-            delay: 1000,
-            repeat: 10,
+            delay: 5000,
+            loop: true,
             callback: () =>{
-                const enemy = new Enemy(this, this.pathPoints[0].x, this.pathPoints[0].y, 100000);
-                enemy.on('pointerover', () => {
-                    if (!enemy.healthText){
-                        enemy.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
-                            fontSize: "50px",
-                            fill: "#000000"
-                        })
-                    }
+                console.log("wave " + this.wave)
+                for (let i = 0; i < this.wave; i++){
 
-                });
-                enemy.on('pointerout', () => {
-                    if (enemy.healthText) {
-                        enemy.healthText.destroy();
-                        enemy.healthText = null;
-                    }
-                });
-this.amountOfEnimies.push(enemy);
+                    this.spawnEnemy(i*40)
+                }
+                this.wave++
             }
         })
         
@@ -413,7 +416,26 @@ this.amountOfEnimies.push(enemy);
         
     }
 
-    
+    spawnEnemy(offset) {
+        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, 100000);
+                enemy.on('pointerover', () => {
+                    if (!enemy.healthText){
+                        enemy.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
+                            fontSize: "50px",
+                            fill: "#000000"
+                        })
+                    }
+
+                });
+                enemy.on('pointerout', () => {
+                    if (enemy.healthText) {
+                        enemy.healthText.destroy();
+                        enemy.healthText = null;
+                    }
+                });
+        this.amountOfEnimies.push(enemy);
+    }
+
     drawPath() {
         // Make a path for the enemies
         const graphics = this.add.graphics()
@@ -459,6 +481,7 @@ class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
     }
+    
 
     buyStuff(){
 
@@ -472,6 +495,8 @@ class MenuScene extends Phaser.Scene {
         this.load.image("range", "Range.png")
     }
     create(){
+        let bowPrice = 100
+        this.moneyText = this.add.text(20, 20, money)
         const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
         const gameText = this.add.text(1050, 30, 'Game', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
         gameText.on("pointerdown", () => {
@@ -480,19 +505,31 @@ class MenuScene extends Phaser.Scene {
         })
 
 
-        const buyBowBox = this.add.rectangle(300, 300, 80, 40, 0xffffff).setOrigin(0.5, 0.5).setDepth(1)
-        this.add.rectangle(buyBowBox.x, buyBowBox.y, buyBowBox.width+buyBowBox.height*.1, buyBowBox.height+buyBowBox.height*.1, 0x000000)
-        const buyBow = this.add.text(buyBowBox.x, buyBowBox.y, 'Buy', { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive().setDepth(2)
+        const buyBowBox = this.add.rectangle(300, 300, 80, 90, 0xffffff).setOrigin(0.5, 0.5).setDepth(1)
+        this.add.rectangle(buyBowBox.x, buyBowBox.y, buyBowBox.width+4, buyBowBox.height+4, 0x000000)
+        const buyBow = this.add.text(buyBowBox.x, buyBowBox.y+20, 'Buy', { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive().setDepth(2)
+        this.add.image(buyBowBox.x, buyBowBox.y-15, "bow").setScale(.1).setDepth(2).setOrigin(0.5, 0.5)
+        this.bowInventoryText =this.add.text(buyBowBox.x+30, buyBowBox.y-35, bowInventory.length, { fontSize: '15px', fill: '0x000000', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setDepth(2)
         
         buyBow.on("pointerdown", () => {
-            inventory.push("bow")
+            if (money >= bowPrice){
+                inventory.push("bow")
+                bowInventory.push("bow")
+                money -= bowPrice
+            }
+            
         })
 
         
     }
 
     update(){
-
+        if (this.bowInventoryText){
+            // update the bow inventory text
+            this.bowInventoryText.setText(bowInventory.length)
+        }
+        this.moneyText.setText(money)
+        
     }
 
 
