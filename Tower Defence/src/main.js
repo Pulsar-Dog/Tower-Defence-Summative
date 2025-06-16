@@ -17,6 +17,12 @@ class Tower extends Phaser.GameObjects.Sprite {
         // this.rangeSprite.setSize((Math.Pi * this.range)**2)
         // this.rangeSprite.setDepth(-1)
     }
+    upgradeRange(amount){
+        this.range += amount
+    }
+    upgradeAttackSpeed(amount){
+        this.attackSpeed -= amount
+    }
 
     // Make the tower aim at the closest enemy
     aimAtClosestEnemy(enemies){
@@ -68,6 +74,9 @@ class Bullet extends Phaser.GameObjects.Sprite {
         this.bulletSpeed = bulletSpeed
         this.range = range
         this.setScale(.5)
+    }
+    upgradeDamage(amount){
+        this.damage += amount
     }
     
     //shoot at the closest enemy
@@ -178,9 +187,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
                 }
             }
             else{
-                this.pathPoint = 0
-                this.x = pathPoints[0].x
-                this.y = pathPoints[0].y
+                this.destroy()
             }
         }
         else{
@@ -211,10 +218,13 @@ class MainScene extends Phaser.Scene {
         this.load.image("bow", "Sci-Fi Bow.png")
         this.load.image("bullet", "Bullet.png")
         this.load.image("range", "Range.png")
+        this.load.image("RangeBtn", "RangeButton.png")
     }
 
     create() {
-        const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
+        this.bowImage = this.add.image(700, 600 , "bow").setScale(.24)
+        this.bowInventoryText = this.add.text(721, 555, bowInventory.length, { fontSize: '20px', fill: '0x000000', fontFamily: "Arial", fontWeight: "bold"})
+        const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial"}).setOrigin(0.5, 0.5).setInteractive()
         menuText.on('pointerdown', ()=>{
             this.scene.pause()
             this.scene.launch("MenuScene")
@@ -348,14 +358,17 @@ class MainScene extends Phaser.Scene {
         // every second, for 5 seconds, add an enemy to the list
         this.amountOfEnimies= []
         this.wave = 1
+        this.delay = 1000
         this.enemyTimer = this.time.addEvent({
-            delay: 5000,
+            delay: this.delay,
             loop: true,
             callback: () =>{
                 console.log("wave " + this.wave)
                 for (let i = 0; i < this.wave; i++){
 
                     this.spawnEnemy(i*40)
+                    this.delay = Math.min(10000, this.delay + 1000)
+                    this.enemyTimer.delay = this.delay
                 }
                 this.wave++
             }
@@ -378,6 +391,7 @@ class MainScene extends Phaser.Scene {
 
     update() {
         if (this.paused) return
+        this.bowInventoryText.setText(bowInventory.length)
         this.moneyText.setText(money)
         let moneyMultiplier = Phaser.Math.Between(66, 133)
         // move the enemies along the path
