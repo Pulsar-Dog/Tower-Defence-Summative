@@ -187,7 +187,9 @@ class Enemy extends Phaser.GameObjects.Sprite {
                 }
             }
             else{
+                this.scene.totalHealth -= this.health
                 this.destroy()
+                
             }
         }
         else{
@@ -210,6 +212,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' })
+        
     }
 
     preload() {
@@ -222,6 +225,12 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        this.totalHealth = 10000
+        money = 1000;
+        moneyMultiplier = Phaser.Math.Between(66, 133);
+        inventory = [];
+        bowInventory = [];
+        this.totalHealthText = this.add.text(100, 20, this.totalHealth)
         this.bowImage = this.add.image(700, 600 , "bow").setScale(.24)
         this.bowInventoryText = this.add.text(721, 555, bowInventory.length, { fontSize: '20px', fill: '0x000000', fontFamily: "Arial", fontWeight: "bold"})
         const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial"}).setOrigin(0.5, 0.5).setInteractive()
@@ -298,13 +307,16 @@ class MainScene extends Phaser.Scene {
                 this.bows.push(newBow)
                 newBow.on('pointerover', () => {
                     if (!newBow.rangeSprite){
-                        newBow.rangeSprite = this.add.image(newBow.x, newBow.y, rangeKey);
+                        newBow.rangeSprite = this.add.image(newBow.x, newBow.y, rangeKey)
                         // Scale so the displayed radius matches newBow.range
-                        const scale = newBow.range / baseRadius;
-                        newBow.rangeSprite.setScale(scale);
-                        newBow.rangeSprite.setDepth(-1);
+                        const scale = newBow.range / baseRadius
+                        newBow.rangeSprite.setScale(scale)
+                        newBow.rangeSprite.setDepth(-1)
 
                         
+                    }
+                    if (!this.rangeBtn){
+                        this.rangeBtn = this.add.image(newBow.x-5, newBow.y+20, "RangeBtn").setScale(.25).setInteractive().setOrigin(1, 0)
                     }
                     this.paused = true
                     for (let bow of this.bows){
@@ -321,6 +333,10 @@ class MainScene extends Phaser.Scene {
                         newBow.rangeSprite.destroy()
                         newBow.rangeSprite = null
                         
+                    }
+                    if (this.rangeBtn){
+                        this.rangeBtn.destroy()
+                        this.rangeBtn = null
                     }
                     this.paused = false
                     for (let bow of this.bows){
@@ -390,13 +406,17 @@ class MainScene extends Phaser.Scene {
     }
 
     update() {
+        if (this.totalHealth <=0){
+            this.scene.start("DeathScene")
+        }
         if (this.paused) return
+        this.totalHealthText.setText(this.totalHealth)
         this.bowInventoryText.setText(bowInventory.length)
         this.moneyText.setText(money)
         let moneyMultiplier = Phaser.Math.Between(66, 133)
         // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 1)  
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 5)  
             if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.66 && !this.amountOfEnimies[i].sixtysixPercent){
                 money += moneyMultiplier
                 this.amountOfEnimies[i].sixtysixPercent = true
@@ -431,7 +451,7 @@ class MainScene extends Phaser.Scene {
     }
 
     spawnEnemy(offset) {
-        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, 100000);
+        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, 50000);
                 enemy.on('pointerover', () => {
                     if (!enemy.healthText){
                         enemy.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
@@ -509,6 +529,7 @@ class MenuScene extends Phaser.Scene {
         this.load.image("range", "Range.png")
     }
     create(){
+        
         let bowPrice = 100
         this.moneyText = this.add.text(20, 20, money)
         const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
@@ -552,10 +573,27 @@ class MenuScene extends Phaser.Scene {
 
 }
 
+class DeathScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'DeathScene' });
+    }
+    preload(){
+
+    }
+    create(){
+        this.add.text(100, 100, 'Game Over', { fontSize: '64px', fill: '#ffffff' })
+        this.add.text(100, 200, 'Click to Restart', { fontSize: '32px', fill: '#ffffff' }).setInteractive()
+        this.input.on('pointerdown', () => {
+            this.scene.start('MainScene')
+        })
+    }
+    update(){
+
+    }
 
 
 
-
+}
 
 
 
@@ -567,7 +605,7 @@ const config = {
     type: Phaser.CANVAS,
     width: 1100,
     height: 650,
-    scene: [MainScene, MenuScene],
+    scene: [MainScene, MenuScene, DeathScene],
     scale: {mode: Phaser.Scale.FIT},
     backgroundColor: 0x006400,
 
