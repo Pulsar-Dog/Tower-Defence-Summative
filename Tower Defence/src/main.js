@@ -232,7 +232,7 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        this.totalHealth = 100000
+        this.totalHealth = 1000000
         money = 1000;
         moneyMultiplier = Phaser.Math.Between(66, 133);
         inventory = [];
@@ -379,25 +379,34 @@ class MainScene extends Phaser.Scene {
         // every second, for 5 seconds, add an enemy to the list
         this.amountOfEnimies= []
         this.wave = 1
-        this.delay = 1000
+        this.delay = 1
+        this.decay = 20
+        this.increment = 350
+        this.decayDecay = 0.99999
         this.enemyTimer = this.time.addEvent({
             delay: this.delay,
             loop: true,
             callback: () =>{
                 console.log("wave " + this.wave)
-                this.decay = 100
-                this.increment = 1000
-                this.decayDecay = 0.9
+                
                 for (let i = 0; i < this.wave; i++){
                     
 
                     
                     this.spawnEnemy(i*40)
                     this.delay = Math.min(100000, this.delay + this.increment)
-                    this.increment -= this.decay
-                    this.decay *= this.decayDecay
-                    this.enemyTimer.delay = this.delay
+                    
                 }
+                this.increment -= this.decay
+                this.decay *= this.decayDecay
+                console.log("delay: " + this.delay)
+                this.enemyTimer.delay = this.delay
+                if (this.delay >= 20000){
+                    this.increment = 0
+                    this.decay = 0
+                    
+                }
+                
                 this.wave++
             }
         })
