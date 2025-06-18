@@ -19,10 +19,33 @@ class Tower extends Phaser.GameObjects.Sprite {
     }
     upgradeRange(amount){
         this.range += amount
+        
     }
-    upgradeAttackSpeed(amount){
-        this.attackSpeed -= amount
-    }
+    upgradeAttackSpeed(amount) {
+    // // Prevent delay from being zero or negative
+    // this.attackSpeed = Math.max(50, this.attackSpeed - amount)
+
+    // if (this.bulletTimer) {
+    //     this.bulletTimer.remove(false)  // remove existing timer but don't destroy the tower
+    // }
+
+    // // Create new timer with updated delay
+    // this.bulletTimer = this.scene.time.addEvent({
+    //     delay: this.attackSpeed,
+    //     loop: true,
+    //     callback: () => {
+    //         const closest = this.aimAtClosestEnemy(this.amountOfEnemies)
+    //         if (closest) {
+    //             const bullet = new Bullet(this.scene, this.x, this.y, 20, 100, this.range)
+    //             bullet.target = closest
+    //             this.scene.bullets.push(bullet)
+    //         }
+    //     }
+    // })
+}
+
+
+    
 
     // Make the tower aim at the closest enemy
     aimAtClosestEnemy(enemies){
@@ -315,9 +338,7 @@ class MainScene extends Phaser.Scene {
 
                         
                     }
-                    if (!this.rangeBtn){
-                        this.rangeBtn = this.add.image(newBow.x-5, newBow.y+20, "RangeBtn").setScale(.25).setInteractive().setOrigin(1, 0)
-                    }
+                    
                     this.paused = true
                     for (let bow of this.bows){
                         bow.bulletTimer.paused = true
@@ -410,6 +431,7 @@ class MainScene extends Phaser.Scene {
             this.scene.start("DeathScene")
         }
         if (this.paused) return
+
         this.totalHealthText.setText(this.totalHealth)
         this.bowInventoryText.setText(bowInventory.length)
         this.moneyText.setText(money)
@@ -435,6 +457,9 @@ class MainScene extends Phaser.Scene {
         
         for (let bow of this.bows) {
             bow.aimAtClosestEnemy(this.amountOfEnimies)
+            if (bow.rangeSprite) {
+                bow.rangeSprite.setScale(bow.range / baseRadius)
+            }
             
             
         }
@@ -517,29 +542,7 @@ class MenuScene extends Phaser.Scene {
     }
     
 
-    buyStuff(){
-
-    }
-
-
-    preload(){
-        this.load.image("drone", "Drone.png")
-        this.load.image("bow", "Sci-Fi Bow.png")
-        this.load.image("bullet", "Bullet.png")
-        this.load.image("range", "Range.png")
-    }
-    create(){
-        
-        let bowPrice = 100
-        this.moneyText = this.add.text(20, 20, money)
-        const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
-        const gameText = this.add.text(1050, 30, 'Game', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
-        gameText.on("pointerdown", () => {
-            this.scene.stop()
-            this.scene.resume("MainScene")
-        })
-
-
+    drawBow(bowPrice){
         const buyBowBox = this.add.rectangle(300, 300, 80, 90, 0xffffff).setOrigin(0.5, 0.5).setDepth(1)
         this.add.rectangle(buyBowBox.x, buyBowBox.y, buyBowBox.width+4, buyBowBox.height+4, 0x000000)
         const buyBow = this.add.text(buyBowBox.x, buyBowBox.y+20, 'Buy', { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive().setDepth(2)
@@ -554,6 +557,48 @@ class MenuScene extends Phaser.Scene {
             }
             
         })
+        
+        this.rangeBtn = this.add.image(buyBow.x-5, buyBow.y+30, "RangeBtn").setScale(.4).setInteractive().setOrigin(1, 0)
+        this.rangeBtn.on("pointerdown", () => {
+            const mainScene = this.scene.get("MainScene")
+            for (let bow of mainScene.bows){
+                bow.upgradeRange(500)
+            }
+
+        })
+
+        this.attackSpeedBtn = this.add.image(buyBow.x+5, buyBow.y+30, "attackSpeedBtn").setScale(.4).setInteractive().setOrigin(0, 0)
+        this.attackSpeedBtn.on("pointerdown", () => {
+            const mainScene = this.scene.get("MainScene")
+            for (let bow of mainScene.bows){
+                bow.upgradeAttackSpeed(50)
+            }
+        })
+
+    
+    }
+
+    preload(){
+        this.load.image("drone", "Drone.png")
+        this.load.image("bow", "Sci-Fi Bow.png")
+        this.load.image("bullet", "Bullet.png")
+        this.load.image("range", "Range.png")
+        this.load.image("attackSpeedBtn", "AttackSpeedButton.png")
+        this.load.image("damageBtn", "DamageButton.png")
+    }
+    create(){
+        
+        let bowPrice = 100
+        this.moneyText = this.add.text(20, 20, money)
+        const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
+        const gameText = this.add.text(1050, 30, 'Game', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
+        gameText.on("pointerdown", () => {
+            this.scene.stop()
+            this.scene.resume("MainScene")
+        })
+
+        this.drawBow(bowPrice)
+        
 
         
     }
