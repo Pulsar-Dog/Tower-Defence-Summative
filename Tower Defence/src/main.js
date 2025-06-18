@@ -22,26 +22,10 @@ class Tower extends Phaser.GameObjects.Sprite {
         
     }
     upgradeAttackSpeed(amount) {
-    // // Prevent delay from being zero or negative
-    // this.attackSpeed = Math.max(50, this.attackSpeed - amount)
-
-    // if (this.bulletTimer) {
-    //     this.bulletTimer.remove(false)  // remove existing timer but don't destroy the tower
-    // }
-
-    // // Create new timer with updated delay
-    // this.bulletTimer = this.scene.time.addEvent({
-    //     delay: this.attackSpeed,
-    //     loop: true,
-    //     callback: () => {
-    //         const closest = this.aimAtClosestEnemy(this.amountOfEnemies)
-    //         if (closest) {
-    //             const bullet = new Bullet(this.scene, this.x, this.y, 20, 100, this.range)
-    //             bullet.target = closest
-    //             this.scene.bullets.push(bullet)
-    //         }
-    //     }
-    // })
+    this.attackSpeed = Math.max(10, this.attackSpeed - amount)
+    // newBow.bulletTimer.delay = this.attackSpeed
+    this.bulletTimer.delay = this.attackSpeed
+    
 }
 
 
@@ -248,7 +232,7 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        this.totalHealth = 10000
+        this.totalHealth = 100000
         money = 1000;
         moneyMultiplier = Phaser.Math.Between(66, 133);
         inventory = [];
@@ -326,7 +310,7 @@ class MainScene extends Phaser.Scene {
                     if (bowInventoryIndex !== -1) {
                         bowInventory.splice(bowInventoryIndex, 1)
                     }
-                    const newBow = new Tower(this, pointer.x, pointer.y, 300, 100)
+                    const newBow = new Tower(this, pointer.x, pointer.y, 200, 300)
                 this.bows.push(newBow)
                 newBow.on('pointerover', () => {
                     if (!newBow.rangeSprite){
@@ -374,7 +358,7 @@ class MainScene extends Phaser.Scene {
                 callback: () => {
                 const closest = newBow.aimAtClosestEnemy(this.amountOfEnimies)
                 if (closest) {
-                    const bullet = new Bullet(this, newBow.x, newBow.y, 20, 100, newBow.range)
+                    const bullet = new Bullet(this, newBow.x, newBow.y, 20, 5, newBow.range)
                     bullet.target = closest
                     this.bullets.push(bullet)
                 }
@@ -401,10 +385,17 @@ class MainScene extends Phaser.Scene {
             loop: true,
             callback: () =>{
                 console.log("wave " + this.wave)
+                this.decay = 100
+                this.increment = 1000
+                this.decayDecay = 0.9
                 for (let i = 0; i < this.wave; i++){
+                    
 
+                    
                     this.spawnEnemy(i*40)
-                    this.delay = Math.min(10000, this.delay + 1000)
+                    this.delay = Math.min(100000, this.delay + this.increment)
+                    this.increment -= this.decay
+                    this.decay *= this.decayDecay
                     this.enemyTimer.delay = this.delay
                 }
                 this.wave++
@@ -438,7 +429,7 @@ class MainScene extends Phaser.Scene {
         let moneyMultiplier = Phaser.Math.Between(66, 133)
         // move the enemies along the path
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 5)  
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 1)  
             if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.66 && !this.amountOfEnimies[i].sixtysixPercent){
                 money += moneyMultiplier
                 this.amountOfEnimies[i].sixtysixPercent = true
@@ -451,6 +442,9 @@ class MainScene extends Phaser.Scene {
             if (this.amountOfEnimies[i].healthText){
                 this.amountOfEnimies[i].healthText.setPosition(this.amountOfEnimies[i].x, this.amountOfEnimies[i].y)
                 this.amountOfEnimies[i].healthText.setText(this.amountOfEnimies[i].health)
+                if (this.amountOfEnimies[i].health <= 0){
+                    this.amountOfEnimies[i].healthText.destroy()
+                }
             }
         }
         this.amountOfEnimies = this.amountOfEnimies.filter(enemy => enemy.active)
@@ -476,13 +470,17 @@ class MainScene extends Phaser.Scene {
     }
 
     spawnEnemy(offset) {
-        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, 50000);
+        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, offset*10);
                 enemy.on('pointerover', () => {
                     if (!enemy.healthText){
                         enemy.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
                             fontSize: "50px",
                             fill: "#000000"
                         })
+                    }
+                    if (enemy.health <= 1){
+                        enemy.healthText.destroy()
+                        enemy.healthText = null
                     }
 
                 });
@@ -562,7 +560,7 @@ class MenuScene extends Phaser.Scene {
         this.rangeBtn.on("pointerdown", () => {
             const mainScene = this.scene.get("MainScene")
             for (let bow of mainScene.bows){
-                bow.upgradeRange(500)
+                bow.upgradeRange(50)
             }
 
         })
@@ -571,7 +569,7 @@ class MenuScene extends Phaser.Scene {
         this.attackSpeedBtn.on("pointerdown", () => {
             const mainScene = this.scene.get("MainScene")
             for (let bow of mainScene.bows){
-                bow.upgradeAttackSpeed(50)
+                bow.upgradeAttackSpeed(2)
             }
         })
 
