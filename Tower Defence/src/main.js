@@ -1,9 +1,12 @@
 import Phaser from "phaser"
 
-let money = 1000
-let moneyMultiplier = Phaser.Math.Between(66, 133)
+let money = 100000000000
+let moneyMultiplier = Phaser.Math.Between(66, 133)/100
 let inventory = []
 let bowInventory = []
+let baseMoney = 300
+let growthRate = 1.1
+
 
 class Tower extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, range, attackSpeed){
@@ -18,7 +21,7 @@ class Tower extends Phaser.GameObjects.Sprite {
         // this.rangeSprite.setDepth(-1)
     }
     upgradeRange(amount){
-        this.range += amount
+        this.range = Math.min(400, this.range + amount)
         
     }
     upgradeAttackSpeed(amount) {
@@ -200,7 +203,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
             }
         }
         else{
-            money += moneyMultiplier 
+            money += Math.round(baseMoney *0.5 * moneyMultiplier)
             this.destroy()
         }
     }
@@ -232,24 +235,34 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
+        let alreadyMenu = false
         this.totalHealth = 1000000
-        money = 1000;
-        moneyMultiplier = Phaser.Math.Between(66, 133);
+        money = 1000
+        moneyMultiplier = Phaser.Math.Between(66, 133)/100
         inventory = [];
         bowInventory = [];
-        this.totalHealthText = this.add.text(100, 20, this.totalHealth)
+        this.totalHealthText = this.add.text(20, 40, this.totalHealth)
         this.bowImage = this.add.image(700, 600 , "bow").setScale(.24)
         this.bowInventoryText = this.add.text(721, 555, bowInventory.length, { fontSize: '20px', fill: '0x000000', fontFamily: "Arial", fontWeight: "bold"})
         const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial"}).setOrigin(0.5, 0.5).setInteractive()
         menuText.on('pointerdown', ()=>{
-            this.scene.pause()
-            this.scene.launch("MenuScene")
+            this.scene.pause("MainScene")
+            this.scene.setVisible(false, "MainScene")
+            if (!alreadyMenu){
+                this.scene.launch("MenuScene")
+                alreadyMenu = true
+            }
+            else{
+                this.scene.resume("MenuScene")
+                this.scene.setVisible(true, "MenuScene")
+            }
+
         })
         this.paused = false
         console.log("create")
         this.drawPath()
         // money = money.toString()
-        this.moneyText = this.add.text(20, 20, money)
+        this.moneyText = this.add.text(20, 20, money.toFixed(2))
         const baseRadius = 100;
         const rangeKey = 'rangeCircle';
         if (!this.textures.exists(rangeKey)) {
@@ -434,17 +447,20 @@ class MainScene extends Phaser.Scene {
 
         this.totalHealthText.setText(this.totalHealth)
         this.bowInventoryText.setText(bowInventory.length)
-        this.moneyText.setText(money)
-        let moneyMultiplier = Phaser.Math.Between(66, 133)
+        this.moneyText.setText(money.toFixed(2))
+        moneyMultiplier = Phaser.Math.Between(66, 133)/100
         // move the enemies along the path
+        
+
         for (let i = 0; i < this.amountOfEnimies.length; i++){
-            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, 1)  
+            
+            this.amountOfEnimies[i].moveAlongPath(this.pathPoints, .8)  
             if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.66 && !this.amountOfEnimies[i].sixtysixPercent){
-                money += moneyMultiplier
+                money += Math.round(baseMoney * 0.2 * moneyMultiplier)
                 this.amountOfEnimies[i].sixtysixPercent = true
             }
             if (this.amountOfEnimies[i].health < this.amountOfEnimies[i].fullHealth *.33 && !this.amountOfEnimies[i].thirtythreePercent){
-                money += moneyMultiplier
+                money += Math.round(baseMoney * 0.3 * moneyMultiplier)
                 this.amountOfEnimies[i].thirtythreePercent = true
             }
             
@@ -479,7 +495,10 @@ class MainScene extends Phaser.Scene {
     }
 
     spawnEnemy(offset) {
-        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, offset*10);
+        const iteration = offset / 40
+        const health = Math.round(30 * Math.pow(iteration, 1.2) * Math.pow(1.02, iteration))
+        
+        const enemy = new Enemy(this, this.pathPoints[0].x-offset, this.pathPoints[0].y, health);
                 enemy.on('pointerover', () => {
                     if (!enemy.healthText){
                         enemy.healthText = this.add.text(enemy.x, enemy.y, enemy.health, {
@@ -549,36 +568,56 @@ class MenuScene extends Phaser.Scene {
     }
     
 
-    drawBow(bowPrice){
+    drawBow() {
         const buyBowBox = this.add.rectangle(300, 300, 80, 90, 0xffffff).setOrigin(0.5, 0.5).setDepth(1)
         this.add.rectangle(buyBowBox.x, buyBowBox.y, buyBowBox.width+4, buyBowBox.height+4, 0x000000)
-        const buyBow = this.add.text(buyBowBox.x, buyBowBox.y+20, 'Buy', { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive().setDepth(2)
+        const buyBow = this.add.text(buyBowBox.x, buyBowBox.y+17, 'Buy', { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive().setDepth(2)
         this.add.image(buyBowBox.x, buyBowBox.y-15, "bow").setScale(.1).setDepth(2).setOrigin(0.5, 0.5)
         this.bowInventoryText =this.add.text(buyBowBox.x+30, buyBowBox.y-35, bowInventory.length, { fontSize: '15px', fill: '0x000000', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setDepth(2)
-        
+        this.bowPriceText = this.add.text(buyBowBox.x, buyBow.y+17, this.bowPrice, { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setDepth(2)
+
+
         buyBow.on("pointerdown", () => {
-            if (money >= bowPrice){
+            if (money >= this.bowPrice){
                 inventory.push("bow")
                 bowInventory.push("bow")
-                money -= bowPrice
+                money -= this.bowPrice
+                this.bowPrice *= 1 + 1 / Math.sqrt(this.bowPriceIteration)
+                this.bowPriceIteration += 1
+                this.bowPriceText.setText(this.bowPrice.toFixed(2))
             }
             
         })
         
         this.rangeBtn = this.add.image(buyBow.x-5, buyBow.y+30, "RangeBtn").setScale(.4).setInteractive().setOrigin(1, 0)
+        this.rangePriceText = this.add.text(this.rangeBtn.x-60, this.rangeBtn.y+17, this.rangePrice, { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setDepth(2)
         this.rangeBtn.on("pointerdown", () => {
             const mainScene = this.scene.get("MainScene")
-            for (let bow of mainScene.bows){
-                bow.upgradeRange(50)
+            if (money > this.rangePrice){
+                for (let bow of mainScene.bows){
+                    bow.upgradeRange(10)
+                    
+                }
+                money -= this.rangePrice
+                this.rangePrice *= 1 + 1 / Math.sqrt(this.rangePriceIteration)
+                this.rangePriceIteration += 1
+                this.rangePriceText.setText(this.rangePrice.toFixed(2))
             }
-
         })
 
         this.attackSpeedBtn = this.add.image(buyBow.x+5, buyBow.y+30, "attackSpeedBtn").setScale(.4).setInteractive().setOrigin(0, 0)
+        this.attackSpeedPriceText = this.add.text(this.attackSpeedBtn.x+28, this.attackSpeedBtn.y+17, this.speedPrice, { fontSize: '20px', fill: '#0f0', fontFamily: "Arial" }).setDepth(2)
         this.attackSpeedBtn.on("pointerdown", () => {
             const mainScene = this.scene.get("MainScene")
-            for (let bow of mainScene.bows){
-                bow.upgradeAttackSpeed(2)
+            if (money > this.speedPrice){
+                for (let bow of mainScene.bows){
+                    bow.upgradeAttackSpeed(2)
+                    
+                }
+                money -= this.speedPrice
+                this.speedPrice *= 1 + 1 / Math.sqrt(this.speedPriceIteration)
+                this.speedPriceIteration += 1
+                this.attackSpeedPriceText.setText(this.speedPrice.toFixed(2))
             }
         })
 
@@ -595,16 +634,24 @@ class MenuScene extends Phaser.Scene {
     }
     create(){
         
-        let bowPrice = 100
+        this.bowPrice = 100
+        this.bowPriceIteration = 1
+        this.speedPrice = 100
+        this.speedPriceIteration = 1
+        this.rangePrice = 100
+        this.rangePriceIteration = 1
         this.moneyText = this.add.text(20, 20, money)
         const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
         const gameText = this.add.text(1050, 30, 'Game', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
         gameText.on("pointerdown", () => {
-            this.scene.stop()
+            this.scene.setVisible(false, "MenuScene")
+            this.scene.bringToTop("MainScene")
+            this.scene.pause()
             this.scene.resume("MainScene")
+            this.scene.setVisible(true, "MainScene")
         })
 
-        this.drawBow(bowPrice)
+        this.drawBow()
         
 
         
@@ -616,6 +663,7 @@ class MenuScene extends Phaser.Scene {
             this.bowInventoryText.setText(bowInventory.length)
         }
         this.moneyText.setText(money)
+        
         
     }
 
