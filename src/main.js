@@ -215,7 +215,7 @@ class MainScene extends Phaser.Scene {
         super({ key: 'MainScene' })
         
     }
-    // Preload the assets for the game
+    // Preload the assets for the game beep
     preload() {
         console.log("preload")
         this.load.image("drone", "Drone.png")
