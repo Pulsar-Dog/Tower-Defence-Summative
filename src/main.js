@@ -1,4 +1,5 @@
-import Phaser from "phaser"
+import Phaser from 'https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.esm.js';
+
 // This is a simple tower defense game where you can place towers to shoot at enemies
 // The game has a main scene, a menu scene, and a death scene
 let money = 1000
