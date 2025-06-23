@@ -1,13 +1,15 @@
 import Phaser from "phaser"
-
-let money = 100000000000
+// This is a simple tower defense game where you can place towers to shoot at enemies
+// The game has a main scene, a menu scene, and a death scene
+let money = 1000
 let moneyMultiplier = Phaser.Math.Between(66, 133)/100
 let inventory = []
 let bowInventory = []
 let baseMoney = 300
-let growthRate = 1.1
+let growthRate = 1.01
 
-
+// Tower class is a tower that can shoot at enemies
+// It has a range, attack speed, and can upgrade its range and attack speed
 class Tower extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, range, attackSpeed){
         super(scene, x, y, "bow")
@@ -20,10 +22,13 @@ class Tower extends Phaser.GameObjects.Sprite {
         // this.rangeSprite.setSize((Math.Pi * this.range)**2)
         // this.rangeSprite.setDepth(-1)
     }
+
+    // Upgrade the tower's range and attack speed
     upgradeRange(amount){
         this.range = Math.min(400, this.range + amount)
         
     }
+    // Upgrade the tower's attack speed
     upgradeAttackSpeed(amount) {
     this.attackSpeed = Math.max(10, this.attackSpeed - amount)
     // newBow.bulletTimer.delay = this.attackSpeed
@@ -75,7 +80,7 @@ class Tower extends Phaser.GameObjects.Sprite {
     
 }
 
-
+// Bullet class is a bullet that can shoot at enemies
 class Bullet extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, bulletSpeed, damage, range){
         super(scene, x, y, "bullet")
@@ -85,6 +90,7 @@ class Bullet extends Phaser.GameObjects.Sprite {
         this.range = range
         this.setScale(.5)
     }
+    // Upgrade the bullet's damage
     upgradeDamage(amount){
         this.damage += amount
     }
@@ -97,7 +103,8 @@ class Bullet extends Phaser.GameObjects.Sprite {
             this.rotation = Math.atan2(target.y - this.y, target.x - this.x)
             const directionx = target.x - this.x
             const directiony = target.y - this.y
-                
+            
+            // calculate the distance to the target
             const distance = Math.sqrt(directionx * directionx + directiony * directiony)
 
             // get rid of the bullet when it gets close
@@ -105,14 +112,17 @@ class Bullet extends Phaser.GameObjects.Sprite {
                 this.target.health -= this.damage
                 this.destroy()
             }
+            // if the distance is greater than the range, destroy the bullet
             else if (distance > this.range){
                 this.destroy()
             }
+            // move the bullet towards the target
             else{
                 this.x += (directionx / distance) * this.bulletSpeed
                 this.y += (directiony / distance) * this.bulletSpeed
             }
         }
+        // if the target is null, destroy the bullet
         else{
             this.destroy()
         }
@@ -151,7 +161,7 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
     }
 
-    
+    // move the enemy along the path
     moveAlongPath(pathPoints, speed) {
         //move if there are more points
         if (this.health > 0){
@@ -160,32 +170,17 @@ class Enemy extends Phaser.GameObjects.Sprite {
 
                 const directionx = target.x - this.x
                 const directiony = target.y - this.y
-                
+                // calculate the distance to the target
                 const distance = Math.sqrt(directionx * directionx + directiony * directiony)
 
+                // if the distance is less than 5, move to the next point
                 if (distance <= 5) {
                     
                     this.pathPoint ++
-                    // let rotateAmount = .9
-                    // let count = 0
-                    
-                    // const nextPoint = pathPoints[this.pathPoint]
-                    // const nextDirectionx = nextPoint.x - this.x
-                    // const nextDirectiony = nextPoint.y - this.y
-
-                    // if (this.rotatingInterval){
-                    //     clearInterval(this.rotatingInterval)
-                    // }
-                    // this.rotatingInterval = setInterval(() => {
-                    //     this.rotation = Math.atan2(nextDirectiony - (nextDirectiony * rotateAmount), nextDirectionx - (nextDirectionx * rotateAmount))
-                    //     rotateAmount -= .1
-                    //     count ++
-                    //     if (count >= 9){
-                    //         clearInterval(this.rotatingInterval)
-                    //     }
-                    // }, 100)
-                    
+                
                 }
+                // if the distance is greater than 5, move towards the target
+                // and rotate towards the target
                 else{
                     this.x += (directionx / distance) * speed
                     this.y += (directiony / distance) * speed
@@ -196,35 +191,31 @@ class Enemy extends Phaser.GameObjects.Sprite {
                     
                 }
             }
+            // if the enemy has reached the end of the path, destroy it and reduce the total health
             else{
                 this.scene.totalHealth -= this.health
                 this.destroy()
                 
             }
         }
+        // if the enemy's health is less than or equal to 0, destroy it and give money
         else{
             money += Math.round(baseMoney *0.5 * moneyMultiplier)
+            baseMoney *= growthRate
             this.destroy()
         }
     }
 
-    // giveMoney(multiplier, health, fullHealth, variable){
-    //     if (health < fullHealth*multiplier){
-    //         money += 100
-    //         variable = true
-    //     }
-    // }
-
 
 }
 
-
+// This is the main scene of the game, where the game logic is handled
 class MainScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MainScene' })
         
     }
-
+    // Preload the assets for the game
     preload() {
         console.log("preload")
         this.load.image("drone", "Drone.png")
@@ -234,17 +225,23 @@ class MainScene extends Phaser.Scene {
         this.load.image("RangeBtn", "RangeButton.png")
     }
 
+    // Create the game objects and set up the game logic
     create() {
+        
         let alreadyMenu = false
-        this.totalHealth = 1000000
+        this.totalHealth = 100000
         money = 1000
         moneyMultiplier = Phaser.Math.Between(66, 133)/100
-        inventory = [];
-        bowInventory = [];
+        inventory = []
+        bowInventory = []
+
+
         this.totalHealthText = this.add.text(20, 40, this.totalHealth)
         this.bowImage = this.add.image(700, 600 , "bow").setScale(.24)
         this.bowInventoryText = this.add.text(721, 555, bowInventory.length, { fontSize: '20px', fill: '0x000000', fontFamily: "Arial", fontWeight: "bold"})
         const menuText = this.add.text(1050, 30, 'Menu', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial"}).setOrigin(0.5, 0.5).setInteractive()
+        
+        // make the menu text start and pause the mainscene
         menuText.on('pointerdown', ()=>{
             this.scene.pause("MainScene")
             this.scene.setVisible(false, "MainScene")
@@ -258,13 +255,18 @@ class MainScene extends Phaser.Scene {
             }
 
         })
+
+
         this.paused = false
         console.log("create")
+        // Draw the path for the enemies
         this.drawPath()
-        // money = money.toString()
+        
         this.moneyText = this.add.text(20, 20, money.toFixed(2))
-        const baseRadius = 100;
-        const rangeKey = 'rangeCircle';
+        const baseRadius = 100
+        const rangeKey = 'rangeCircle'
+
+        // Create a texture for the range circle if it doesn't exist
         if (!this.textures.exists(rangeKey)) {
             const g = this.make.graphics({x: 0, y: 0, add: false});
             g.fillStyle(0x57B9FF, 0.3);
@@ -274,14 +276,22 @@ class MainScene extends Phaser.Scene {
 }
         this.bows = []
 
+
+        // whole event for placing a bow
         this.input.on("pointerdown", (pointer) => {
+            //
             const canvas = this.sys.game.canvas
             const ctx = canvas.getContext('2d')
             const imageData = ctx.getImageData(pointer.x, pointer.y, 1, 1).data
+
+            // Check if the clicked position is on a white pixel and if it is dont place a bow
             if (imageData[0] === 255 && imageData[1] === 255 && imageData[2] === 255 && imageData[3] > 0){
             }
+            // If the clicked position is not on a white pixel, place a bow
             else{                            
                 let place = true
+
+                // Check if the clicked position is too close to other bows
                 for (let closeToTower of this.bows){
                     const directionx = closeToTower.x - pointer.x
                     const directiony = closeToTower.y - pointer.y
@@ -292,16 +302,8 @@ class MainScene extends Phaser.Scene {
                         break
                     }
                 }
-                // for (let closeToEnemy of this.amountOfEnimies){
-                //     const directionx = closeToEnemy.x - pointer.x
-                //     const directiony = closeToEnemy.y - pointer.y
 
-                //     const distance = Math.sqrt(directionx * directionx + directiony * directiony)
-                //     if (distance < 30){
-                //         place = false
-                //         break
-                //     }
-                // }
+                // Check if the clicked position is too close to the menu
                 const menuDistX =  pointer.x - 1050
                 const menuDistY = pointer.y - 30
                 const menuDistance = Math.sqrt(menuDistX * menuDistX + menuDistY * menuDistY)
@@ -309,13 +311,17 @@ class MainScene extends Phaser.Scene {
                     place = false
                 }
                 
+                // If no bow is in the inventory, don't place a bow
                 if (!inventory.includes("bow")){
                     place = false
                     
                 }
+
+                //  If the clicked position is valid, place a bow
                 if (place){
                     const bowInvertoryIndex = inventory.indexOf("bow")
                     
+                    // Remove the bow from the inventory and bowInventory
                     if (bowInvertoryIndex !== -1) {
                         inventory.splice(bowInvertoryIndex, 1)
                     }
@@ -323,8 +329,13 @@ class MainScene extends Phaser.Scene {
                     if (bowInventoryIndex !== -1) {
                         bowInventory.splice(bowInventoryIndex, 1)
                     }
+
+                // Create a new bow at the clicked position
+                // The bow has a range of 200 and an attack speed of 300
                     const newBow = new Tower(this, pointer.x, pointer.y, 200, 300)
                 this.bows.push(newBow)
+
+                // If the mouse is over the bow, show the range circle, and pause the game
                 newBow.on('pointerover', () => {
                     if (!newBow.rangeSprite){
                         newBow.rangeSprite = this.add.image(newBow.x, newBow.y, rangeKey)
@@ -343,6 +354,8 @@ class MainScene extends Phaser.Scene {
                     this.enemyTimer.paused = true
                     
                 })
+
+                // If the mouse is not over the bow, hide the range circle, and resume the game
                 newBow.on('pointerout', () => {
                     this.scene.resume()
                     if (newBow.rangeSprite){
@@ -364,7 +377,7 @@ class MainScene extends Phaser.Scene {
                     this.enemyTimer.paused = false
                 })
             
-
+                // spawn bullets based on the attack speed
                 newBow.bulletTimer = this.time.addEvent({
                 delay: newBow.attackSpeed,
                 loop: true,
@@ -389,7 +402,7 @@ class MainScene extends Phaser.Scene {
             }
             })
 
-        // every second, for 5 seconds, add an enemy to the list
+        // spawn enemies, have the time between waves increase until a certain point, then stop increasing
         this.amountOfEnimies= []
         this.wave = 1
         this.delay = 1
@@ -423,35 +436,28 @@ class MainScene extends Phaser.Scene {
                 this.wave++
             }
         })
-        
-        //spawn the bow
-        
-    
-        //make bullets spawn on the bow every second
-
         this.bullets = []
-    
-
-
-
-
-       
-
     }
 
+
     update() {
+        // if the total health is less than or equal to 0, go to the death scene
         if (this.totalHealth <=0){
             this.scene.start("DeathScene")
         }
+
+        // if the game is paused, don't update anything
         if (this.paused) return
 
+        // update the total health text, bow inventory text, and money text
         this.totalHealthText.setText(this.totalHealth)
         this.bowInventoryText.setText(bowInventory.length)
         this.moneyText.setText(money.toFixed(2))
         moneyMultiplier = Phaser.Math.Between(66, 133)/100
-        // move the enemies along the path
-        
 
+        
+        // move the enemies along the path and check their health
+        // if the enemy's health is less than 66% or 33%, give money
         for (let i = 0; i < this.amountOfEnimies.length; i++){
             
             this.amountOfEnimies[i].moveAlongPath(this.pathPoints, .8)  
@@ -472,8 +478,11 @@ class MainScene extends Phaser.Scene {
                 }
             }
         }
+
+        // filter out the enemies that are not active anymore
         this.amountOfEnimies = this.amountOfEnimies.filter(enemy => enemy.active)
         
+        // make the bows aim at the closest enemy and update their range sprites
         for (let bow of this.bows) {
             bow.aimAtClosestEnemy(this.amountOfEnimies)
             if (bow.rangeSprite) {
@@ -484,8 +493,7 @@ class MainScene extends Phaser.Scene {
         }
         
 
-        // aim the bow at the closest enemy and shoot bullets
-        // const closest = this.bow.aimAtEnemy(this.amountOfEnimies)
+        // make the bullets shoot at the closest enemy
         for (let bullet of this.bullets){
             bullet.shootAtEnemy(bullet.target)
 
@@ -494,6 +502,8 @@ class MainScene extends Phaser.Scene {
         
     }
 
+    // Spawn an enemy at a certain offset from the start of the path, so they arebt overlapping
+    // The health of the enemy is based on the offset, so enemies that spawn later have more health
     spawnEnemy(offset) {
         const iteration = offset / 40
         const health = Math.round(30 * Math.pow(iteration, 1.2) * Math.pow(1.02, iteration))
@@ -567,7 +577,8 @@ class MenuScene extends Phaser.Scene {
         super({ key: 'MenuScene' });
     }
     
-
+    // Draw the bow purchase menu
+    // This menu allows the player to buy bows and upgrade their range and attack speed
     drawBow() {
         const buyBowBox = this.add.rectangle(300, 300, 80, 90, 0xffffff).setOrigin(0.5, 0.5).setDepth(1)
         this.add.rectangle(buyBowBox.x, buyBowBox.y, buyBowBox.width+4, buyBowBox.height+4, 0x000000)
@@ -582,7 +593,7 @@ class MenuScene extends Phaser.Scene {
                 inventory.push("bow")
                 bowInventory.push("bow")
                 money -= this.bowPrice
-                this.bowPrice *= 1 + 1 / Math.sqrt(this.bowPriceIteration)
+                this.bowPrice *= 1 + .3 / Math.sqrt(this.bowPriceIteration)
                 this.bowPriceIteration += 1
                 this.bowPriceText.setText(this.bowPrice.toFixed(2))
             }
@@ -599,7 +610,7 @@ class MenuScene extends Phaser.Scene {
                     
                 }
                 money -= this.rangePrice
-                this.rangePrice *= 1 + 1 / Math.sqrt(this.rangePriceIteration)
+                this.rangePrice *= 1 + .3 / Math.sqrt(this.rangePriceIteration)
                 this.rangePriceIteration += 1
                 this.rangePriceText.setText(this.rangePrice.toFixed(2))
             }
@@ -615,7 +626,7 @@ class MenuScene extends Phaser.Scene {
                     
                 }
                 money -= this.speedPrice
-                this.speedPrice *= 1 + 1 / Math.sqrt(this.speedPriceIteration)
+                this.speedPrice *= 1 + .3 / Math.sqrt(this.speedPriceIteration)
                 this.speedPriceIteration += 1
                 this.attackSpeedPriceText.setText(this.speedPrice.toFixed(2))
             }
@@ -633,16 +644,19 @@ class MenuScene extends Phaser.Scene {
         this.load.image("damageBtn", "DamageButton.png")
     }
     create(){
-        
         this.bowPrice = 100
         this.bowPriceIteration = 1
         this.speedPrice = 100
         this.speedPriceIteration = 1
         this.rangePrice = 100
         this.rangePriceIteration = 1
+
+        // Create the menu background and text
         this.moneyText = this.add.text(20, 20, money)
         const background = this.add.rectangle(550, 325, 1100, 650, 0x006400).setOrigin(0.5, 0.5).setDepth(-1)
         const gameText = this.add.text(1050, 30, 'Game', { fontSize: '32px', fill: '#0f0', fontFamily: "Arial" }).setOrigin(0.5, 0.5).setInteractive()
+        
+        // Make the game text start and pause the mainscene
         gameText.on("pointerdown", () => {
             this.scene.setVisible(false, "MenuScene")
             this.scene.bringToTop("MainScene")
@@ -651,6 +665,7 @@ class MenuScene extends Phaser.Scene {
             this.scene.setVisible(true, "MainScene")
         })
 
+        // Create the menu background and text
         this.drawBow()
         
 
@@ -658,10 +673,13 @@ class MenuScene extends Phaser.Scene {
     }
 
     update(){
+
         if (this.bowInventoryText){
             // update the bow inventory text
             this.bowInventoryText.setText(bowInventory.length)
         }
+
+        // update the money text
         this.moneyText.setText(money)
         
         
@@ -681,9 +699,11 @@ class DeathScene extends Phaser.Scene {
 
     }
     create(){
+        // Create the game over text and restart button
         this.add.text(100, 100, 'Game Over', { fontSize: '64px', fill: '#ffffff' })
         this.add.text(100, 200, 'Click to Restart', { fontSize: '32px', fill: '#ffffff' }).setInteractive()
         this.input.on('pointerdown', () => {
+            this.scene.stop('MenuScene')
             this.scene.start('MainScene')
         })
     }
